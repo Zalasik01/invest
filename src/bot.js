@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { chat } = require('./gemini');
-const { buscarCarteira } = require('./database');
+const { buscarCarteira, registrarUsuario } = require('./database');
 const { HELP_MESSAGE } = require('./config');
 const { formatarParaTelegram } = require('./formatador');
 
@@ -123,6 +123,9 @@ function criarBot(polling = true) {
     const userId = query.from.id;
     const messageId = query.message.message_id;
     const data = query.data;
+
+    // Registrar usuário automaticamente (em background)
+    registrarUsuario(query.from).catch(() => {});
 
     // Se já está processando, bloquear cliques
     if (processando.has(userId)) {
@@ -271,6 +274,9 @@ function criarBot(polling = true) {
   // Qualquer mensagem de texto → mostrar menu
   // ==========================================
   bot.on('message', (msg) => {
+    // Registrar usuário automaticamente (em background)
+    if (msg.from) registrarUsuario(msg.from).catch(() => {});
+
     // Permitir /carteira com argumentos
     if (msg.text && msg.text.startsWith('/carteira ')) return;
     // Ignorar comandos já tratados

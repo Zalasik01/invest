@@ -82,6 +82,68 @@ async function limparHistorico(idUsuario) {
   if (error) console.error('Erro ao limpar histórico:', error.message);
 }
 
+/**
+ * Registra ou atualiza usuário automaticamente com dados do Telegram.
+ * Chamado a cada interação — cria se não existe, atualiza nome/username se mudou.
+ */
+async function registrarUsuario(dadosTelegram) {
+  const db = getDb();
+  const { id, first_name, last_name, username, language_code } = dadosTelegram;
+
+  const nomeCompleto = [first_name, last_name].filter(Boolean).join(' ');
+
+  const { error } = await db
+    .from('usuarios')
+    .upsert(
+      {
+        id_usuario: String(id),
+        nome: nomeCompleto,
+        username: username || null,
+        idioma: language_code || null,
+        ultimo_acesso: new Date().toISOString(),
+      },
+      { onConflict: 'id_usuario' }
+    );
+
+  if (error) console.error('Erro ao registrar usuário:', error.message);
+}
+
+/**
+ * Busca dados do usuário pelo ID do Telegram.
+ */
+async function buscarUsuario(idUsuario) {
+  const db = getDb();
+  const { data, error } = await db
+    .from('usuarios')
+    .select('*')
+    .eq('id_usuario', String(idUsuario))
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Erro ao buscar usuário:', error.message);
+    return null;
+  }
+
+  return data || null;
+}
+
+/**
+ * Atualiza email e/ou telefone do usuário.
+ */
+async function atualizarContatoUsuario(idUsuario, { email, telefone }) {
+  const db = getDb();
+  const atualizacao = {};
+  if (email !== undefined) atualizacao.email = email;
+  if (telefone !== undefined) atualizacao.telefone = telefone;
+
+  const { error } = await db
+    .from('usuarios')
+    .update(atualizacao)
+    .eq('id_usuario', String(idUsuario));
+
+  if (error) console.error('Erro ao atualizar contato:', error.message);
+}
+
 module.exports = {
   getDb,
   salvarMensagem,
@@ -89,4 +151,7 @@ module.exports = {
   salvarCarteira,
   buscarCarteira,
   limparHistorico,
+  registrarUsuario,
+  buscarUsuario,
+  atualizarContatoUsuario,
 };
