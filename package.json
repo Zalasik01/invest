@@ -1,0 +1,25 @@
+{
+  "name": "invest-bot",
+  "version": "1.0.0",
+  "description": "Bot Telegram de investimentos com Gemini AI - Assistente focado em renda passiva mensal",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "investimentos",
+    "gemini",
+    "ai"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "better-sqlite3": "^12.6.2",
+    "dotenv": "^17.3.1",
+    "node-telegram-bot-api": "^0.67.0"
+  }
+}
