@@ -1,17 +1,74 @@
 const TelegramBot = require('node-telegram-bot-api');
 const { chat } = require('./gemini');
-const { enviarRespostaLonga, mostrarBotoesDeValor, processarInvestimento } = require('./commands/investir');
 const { buscarCarteira } = require('./database');
 const { HELP_MESSAGE } = require('./config');
+const { formatarParaTelegram } = require('./formatador');
 
 // Importar comandos
 const startCmd = require('./commands/start');
-const investirCmd = require('./commands/investir');
 const carteiraCmd = require('./commands/carteira');
-const helpCmd = require('./commands/help');
 
-// Controle de usuários que estão com processamento em andamento
+// Controle de usuários com processamento em andamento
 const processando = new Set();
+
+// Botões do menu principal
+const MENU_PRINCIPAL = {
+  inline_keyboard: [
+    [
+      { text: '💰 Investir', callback_data: 'menu_investir' },
+      { text: '💼 Minha Carteira', callback_data: 'cmd_carteira' },
+    ],
+    [
+      { text: '❓ Ajuda', callback_data: 'cmd_help' },
+    ],
+  ],
+};
+
+// Botões de valores de investimento
+const BOTOES_VALORES = {
+  inline_keyboard: [
+    [
+      { text: 'R$ 50', callback_data: 'investir_50' },
+      { text: 'R$ 100', callback_data: 'investir_100' },
+      { text: 'R$ 200', callback_data: 'investir_200' },
+    ],
+    [
+      { text: 'R$ 300', callback_data: 'investir_300' },
+      { text: 'R$ 500', callback_data: 'investir_500' },
+      { text: 'R$ 1.000', callback_data: 'investir_1000' },
+    ],
+    [
+      { text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' },
+    ],
+  ],
+};
+
+/**
+ * Envia texto longo dividido em partes de 4096 caracteres
+ */
+async function enviarRespostaLonga(bot, chatId, texto) {
+  const MAX = 4096;
+  if (texto.length <= MAX) {
+    await bot.sendMessage(chatId, texto, { parse_mode: 'HTML' });
+    return;
+  }
+
+  const partes = [];
+  let atual = '';
+  for (const linha of texto.split('\n')) {
+    if ((atual + '\n' + linha).length > MAX) {
+      partes.push(atual.trim());
+      atual = linha;
+    } else {
+      atual += (atual ? '\n' : '') + linha;
+    }
+  }
+  if (atual.trim()) partes.push(atual.trim());
+
+  for (const parte of partes) {
+    await bot.sendMessage(chatId, parte, { parse_mode: 'HTML' });
+  }
+}
 
 function criarBot() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -25,11 +82,34 @@ function criarBot() {
 
   console.log('🤖 InvestBot iniciando...');
 
-  // Registrar comandos
+  // Configurar menu de comandos do Telegram (botão azul no canto inferior)
+  bot.setMyCommands([
+    { command: 'start', description: '🏠 Abrir menu principal' },
+    { command: 'investir', description: '💰 Receber recomendação de investimento' },
+    { command: 'carteira', description: '💼 Ver ou salvar carteira' },
+    { command: 'help', description: '❓ Ajuda' },
+  ]);
+
+  // Registrar comandos de texto (/start e /carteira com args)
   startCmd.registrar(bot);
-  investirCmd.registrar(bot);
   carteiraCmd.registrar(bot);
-  helpCmd.registrar(bot);
+
+  // Comando /investir por texto — redireciona para botões
+  bot.onText(/\/investir/, (msg) => {
+    bot.sendMessage(
+      msg.chat.id,
+      '💰 <b>Quanto deseja investir?</b>\n\nEscolha um valor abaixo:',
+      { parse_mode: 'HTML', reply_markup: BOTOES_VALORES }
+    );
+  });
+
+  // Comando /help por texto
+  bot.onText(/\/help/, (msg) => {
+    bot.sendMessage(msg.chat.id, HELP_MESSAGE, {
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: [[{ text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' }]] },
+    });
+  });
 
   // ==========================================
   // Handler de botões inline (callback_query)
@@ -40,49 +120,43 @@ function criarBot() {
     const messageId = query.message.message_id;
     const data = query.data;
 
-    // Se já está processando, ignorar cliques
+    // Se já está processando, bloquear cliques
     if (processando.has(userId)) {
       bot.answerCallbackQuery(query.id, {
-        text: '⏳ Aguarde, ainda estou processando sua solicitação...',
+        text: '⏳ Aguarde, ainda estou processando...',
         show_alert: false,
       });
       return;
     }
 
-    // Confirmar clique
     bot.answerCallbackQuery(query.id);
 
-    // --- Botões de menu ---
+    // --- Menu principal ---
+    if (data === 'cmd_menu') {
+      bot.editMessageText('🤖 <b>InvestBot</b> — O que deseja fazer?', {
+        chat_id: chatId,
+        message_id: messageId,
+        parse_mode: 'HTML',
+        reply_markup: MENU_PRINCIPAL,
+      });
+      return;
+    }
+
+    // --- Tela de investir ---
     if (data === 'menu_investir') {
-      // Substituir a mensagem anterior pelos botões de valor
       bot.editMessageText(
         '💰 <b>Quanto deseja investir?</b>\n\nEscolha um valor abaixo:',
         {
           chat_id: chatId,
           message_id: messageId,
           parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: 'R$ 50', callback_data: 'investir_50' },
-                { text: 'R$ 100', callback_data: 'investir_100' },
-                { text: 'R$ 200', callback_data: 'investir_200' },
-              ],
-              [
-                { text: 'R$ 300', callback_data: 'investir_300' },
-                { text: 'R$ 500', callback_data: 'investir_500' },
-                { text: 'R$ 1.000', callback_data: 'investir_1000' },
-              ],
-              [
-                { text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' },
-              ],
-            ],
-          },
+          reply_markup: BOTOES_VALORES,
         }
       );
       return;
     }
 
+    // --- Carteira ---
     if (data === 'cmd_carteira') {
       const carteira = buscarCarteira(userId);
 
@@ -93,11 +167,7 @@ function criarBot() {
             chat_id: chatId,
             message_id: messageId,
             parse_mode: 'HTML',
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' }],
-              ],
-            },
+            reply_markup: { inline_keyboard: [[{ text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' }]] },
           }
         );
       } else {
@@ -105,7 +175,7 @@ function criarBot() {
         carteira.forEach((ativo, i) => {
           mensagem += `${i + 1}. <b>${ativo.codigo}</b> — ${ativo.quantidade} cota${ativo.quantidade > 1 ? 's' : ''}\n`;
         });
-        mensagem += '\nPara atualizar, envie no chat:\n<code>/carteira MXRF11 11, PETR3 2</code>';
+        mensagem += '\nPara atualizar:\n<code>/carteira MXRF11 11, PETR3 2</code>';
         bot.editMessageText(mensagem, {
           chat_id: chatId,
           message_id: messageId,
@@ -123,138 +193,97 @@ function criarBot() {
       return;
     }
 
+    // --- Ajuda ---
     if (data === 'cmd_help') {
       bot.editMessageText(HELP_MESSAGE, {
         chat_id: chatId,
         message_id: messageId,
         parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' }],
-          ],
-        },
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' }]] },
       });
       return;
     }
 
-    if (data === 'cmd_menu') {
+    // --- Processar investimento ---
+    if (data.startsWith('investir_')) {
+      const valor = parseFloat(data.replace('investir_', ''));
+      if (isNaN(valor) || valor <= 0) return;
+
+      processando.add(userId);
+
+      // Mostrar loading
       bot.editMessageText(
-        '🤖 <b>InvestBot</b> — O que deseja fazer?',
-        {
-          chat_id: chatId,
-          message_id: messageId,
-          parse_mode: 'HTML',
+        `⏳ <b>Analisando o mercado para R$ ${valor.toFixed(2)}...</b>\n\n🔄 Isso pode levar alguns segundos.`,
+        { chat_id: chatId, message_id: messageId, parse_mode: 'HTML' }
+      );
+
+      bot.sendChatAction(chatId, 'typing');
+
+      try {
+        const prompt = `Tenho R$ ${valor.toFixed(2)} para investir hoje. Me dê uma recomendação completa seguindo a estrutura obrigatória (Análise de Momento, Recomendação de Alocação, Ativos Selecionados, Estimativa de Retorno).`;
+        const respostaRaw = await chat(userId, prompt);
+        const resposta = formatarParaTelegram(respostaRaw);
+
+        await enviarRespostaLonga(bot, chatId, resposta);
+
+        // Menu pós-resposta
+        bot.sendMessage(chatId, '👇 O que deseja fazer agora?', {
           reply_markup: {
             inline_keyboard: [
               [
-                { text: '💰 Investir', callback_data: 'menu_investir' },
+                { text: '💰 Investir outro valor', callback_data: 'menu_investir' },
                 { text: '💼 Minha Carteira', callback_data: 'cmd_carteira' },
               ],
-              [
-                { text: '❓ Ajuda', callback_data: 'cmd_help' },
-              ],
+              [{ text: '🏠 Menu Principal', callback_data: 'cmd_menu' }],
             ],
           },
-        }
-      );
-      return;
-    }
+        });
+      } catch (error) {
+        console.error('Erro no investir:', error.message);
 
-    // --- Botões de investimento ---
-    if (data.startsWith('investir_')) {
-      const valor = parseFloat(data.replace('investir_', ''));
-      if (!isNaN(valor) && valor > 0) {
-        // Mostrar loading — editar mensagem atual
-        processando.add(userId);
-
-        bot.editMessageText(
-          `⏳ <b>Analisando o mercado para R$ ${valor.toFixed(2)}...</b>\n\n🔄 Isso pode levar alguns segundos.`,
+        const isQuota = error.message && (error.message.includes('429') || error.message.includes('quota'));
+        bot.sendMessage(
+          chatId,
+          isQuota
+            ? '⏳ O serviço de IA está sobrecarregado. Tente em alguns segundos.'
+            : '❌ Ocorreu um erro. Tente novamente.',
           {
-            chat_id: chatId,
-            message_id: messageId,
-            parse_mode: 'HTML',
-          }
-        );
-
-        bot.sendChatAction(chatId, 'typing');
-
-        try {
-          const prompt = `Tenho R$ ${valor.toFixed(2)} para investir hoje. Me dê uma recomendação completa seguindo a estrutura obrigatória (Análise de Momento, Recomendação de Alocação, Ativos Selecionados, Estimativa de Retorno).`;
-
-          const resposta = await chat(userId, prompt);
-          await enviarRespostaLonga(bot, chatId, resposta);
-
-          // Mostrar menu após resposta
-          bot.sendMessage(chatId, '👇 O que deseja fazer agora?', {
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: '💰 Investir outro valor', callback_data: 'menu_investir' },
-                  { text: '💼 Minha Carteira', callback_data: 'cmd_carteira' },
-                ],
-                [
-                  { text: '🏠 Menu Principal', callback_data: 'cmd_menu' },
-                ],
-              ],
-            },
-          });
-        } catch (error) {
-          console.error('Erro no investir:', error.message);
-
-          const isQuota = error.message && (error.message.includes('429') || error.message.includes('quota'));
-          const mensagemErro = isQuota
-            ? '⏳ O serviço de IA está temporariamente sobrecarregado.'
-            : '❌ Ocorreu um erro ao processar sua solicitação.';
-
-          bot.sendMessage(chatId, mensagemErro, {
             reply_markup: {
               inline_keyboard: [
                 [{ text: '🔄 Tentar novamente', callback_data: `investir_${valor}` }],
                 [{ text: '🏠 Menu Principal', callback_data: 'cmd_menu' }],
               ],
             },
-          });
-        } finally {
-          processando.delete(userId);
-        }
+          }
+        );
+      } finally {
+        processando.delete(userId);
       }
       return;
     }
   });
 
-  // Handler de mensagens de texto — redirecionar para botões
+  // ==========================================
+  // Qualquer mensagem de texto → mostrar menu
+  // ==========================================
   bot.on('message', (msg) => {
-    // Permitir o comando /carteira com argumentos (para salvar carteira)
+    // Permitir /carteira com argumentos
     if (msg.text && msg.text.startsWith('/carteira ')) return;
-
-    // Ignorar outros comandos (já tratados)
+    // Ignorar comandos já tratados
     if (msg.text && msg.text.startsWith('/')) return;
 
-    // Bloquear texto livre — orientar para usar botões
     if (msg.text) {
       const chatId = msg.chat.id;
 
       if (processando.has(msg.from.id)) {
-        bot.sendMessage(chatId, '⏳ Aguarde, ainda estou processando sua solicitação anterior...');
+        bot.sendMessage(chatId, '⏳ Aguarde, ainda estou processando...');
         return;
       }
 
       bot.sendMessage(
         chatId,
-        '👆 Use os botões acima para interagir comigo!\n\nOu envie /start para abrir o menu.',
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: '💰 Investir', callback_data: 'menu_investir' },
-                { text: '💼 Minha Carteira', callback_data: 'cmd_carteira' },
-              ],
-              [
-                { text: '❓ Ajuda', callback_data: 'cmd_help' },
-              ],
-            ],
-          },
-        }
+        '👆 Use os botões para navegar! Ou clique abaixo:',
+        { reply_markup: MENU_PRINCIPAL }
       );
     }
   });
@@ -269,7 +298,6 @@ function criarBot() {
   });
 
   console.log('✅ InvestBot rodando! Aguardando mensagens...');
-
   return bot;
 }
 
