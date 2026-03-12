@@ -9,8 +9,8 @@ function registrar(bot) {
     if (!valorTexto) {
       bot.sendMessage(
         chatId,
-        '⚠️ Por favor, informe o valor que deseja investir.\n\n_Exemplo: /investir 300_',
-        { parse_mode: 'MarkdownV2' }
+        '⚠️ Por favor, informe o valor que deseja investir.\n\n<i>Exemplo: /investir 300</i>',
+        { parse_mode: 'HTML' }
       );
       return;
     }
@@ -27,8 +27,8 @@ function registrar(bot) {
     if (isNaN(valor) || valor <= 0) {
       bot.sendMessage(
         chatId,
-        '⚠️ Valor inválido. Use um número positivo.\n\n_Exemplo: /investir 300_',
-        { parse_mode: 'MarkdownV2' }
+        '⚠️ Valor inválido. Use um número positivo.\n\n<i>Exemplo: /investir 300</i>',
+        { parse_mode: 'HTML' }
       );
       return;
     }

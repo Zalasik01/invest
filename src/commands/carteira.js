@@ -13,19 +13,19 @@ function registrar(bot) {
       if (!carteira || carteira.length === 0) {
         bot.sendMessage(
           chatId,
-          '📂 Você ainda não salvou sua carteira\\.\n\n_Use: /carteira MXRF11 11, PETR3 2, ITUB4 1_',
-          { parse_mode: 'MarkdownV2' }
+          '📂 Você ainda não salvou sua carteira.\n\n<i>Use: /carteira MXRF11 11, PETR3 2, ITUB4 1</i>',
+          { parse_mode: 'HTML' }
         );
         return;
       }
 
-      let mensagem = '💼 *Sua Carteira Atual:*\n\n';
+      let mensagem = '💼 <b>Sua Carteira Atual:</b>\n\n';
       carteira.forEach((ativo, i) => {
-        mensagem += `${i + 1}\\. *${ativo.codigo}* \\- ${ativo.quantidade} cota${ativo.quantidade > 1 ? 's' : ''}\n`;
+        mensagem += `${i + 1}. <b>${ativo.codigo}</b> - ${ativo.quantidade} cota${ativo.quantidade > 1 ? 's' : ''}\n`;
       });
-      mensagem += '\n_Para atualizar, use: /carteira MXRF11 11, PETR3 2_';
+      mensagem += '\n<i>Para atualizar, use: /carteira MXRF11 11, PETR3 2</i>';
 
-      bot.sendMessage(chatId, mensagem, { parse_mode: 'MarkdownV2' });
+      bot.sendMessage(chatId, mensagem, { parse_mode: 'HTML' });
       return;
     }
 
@@ -46,19 +46,18 @@ function registrar(bot) {
 
       salvarCarteira(userId, ativos);
 
-      let mensagem = '✅ *Carteira salva com sucesso\\!*\n\n';
+      let mensagem = '✅ <b>Carteira salva com sucesso!</b>\n\n';
       ativos.forEach((ativo, i) => {
-        mensagem += `${i + 1}\\. *${ativo.codigo}* \\- ${ativo.quantidade} cota${ativo.quantidade > 1 ? 's' : ''}\n`;
+        mensagem += `${i + 1}. <b>${ativo.codigo}</b> - ${ativo.quantidade} cota${ativo.quantidade > 1 ? 's' : ''}\n`;
       });
-      mensagem +=
-        '\n_Agora suas recomendações levarão sua carteira em conta\\!_ 🎯';
+      mensagem += '\n<i>Agora suas recomendações levarão sua carteira em conta!</i> 🎯';
 
-      bot.sendMessage(chatId, mensagem, { parse_mode: 'MarkdownV2' });
+      bot.sendMessage(chatId, mensagem, { parse_mode: 'HTML' });
     } catch (error) {
       bot.sendMessage(
         chatId,
-        '⚠️ Formato inválido\\. Use assim:\n\n/carteira MXRF11 11, PETR3 2, ITUB4 1\n\n_Código e quantidade separados por espaço, ativos separados por vírgula\\._',
-        { parse_mode: 'MarkdownV2' }
+        '⚠️ Formato inválido. Use assim:\n\n/carteira MXRF11 11, PETR3 2, ITUB4 1\n\n<i>Código e quantidade separados por espaço, ativos separados por vírgula.</i>',
+        { parse_mode: 'HTML' }
       );
     }
   });

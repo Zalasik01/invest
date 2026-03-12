@@ -28,34 +28,34 @@ Regra de Ouro: Nunca use "financês" complicado sem explicar. Mantenha o foco em
 
 IMPORTANTE: Responda sempre em português brasileiro. Use emojis para deixar a comunicação mais visual e amigável.`;
 
-const WELCOME_MESSAGE = `🤖 *Bem-vindo ao InvestBot!*
+const WELCOME_MESSAGE = `🤖 <b>Bem-vindo ao InvestBot!</b>
 
-Sou seu assistente de investimentos focado em *renda passiva mensal* via Itaú íon.
+Sou seu assistente de investimentos focado em <b>renda passiva mensal</b> via Itaú íon.
 
-📋 *Comandos disponíveis:*
+📋 <b>Comandos disponíveis:</b>
 
-/investir \\<valor\\> \\- Recomendação de onde investir
-_Ex: /investir 300_
+/investir &lt;valor&gt; - Recomendação de onde investir
+<i>Ex: /investir 300</i>
 
-/carteira \\- Ver sua carteira atual
-/carteira MXRF11 11, PETR3 2 \\- Salvar carteira
+/carteira - Ver sua carteira atual
+/carteira MXRF11 11, PETR3 2 - Salvar carteira
 
-/help \\- Ver comandos disponíveis
+/help - Ver comandos disponíveis
 
-💬 Ou simplesmente me envie uma mensagem e conversamos sobre investimentos\\!`;
+💬 Ou simplesmente me envie uma mensagem e conversamos sobre investimentos!`;
 
-const HELP_MESSAGE = `📋 *Comandos do InvestBot:*
+const HELP_MESSAGE = `📋 <b>Comandos do InvestBot:</b>
 
-/investir \\<valor\\> \\- Receba uma recomendação completa de investimento
-_Ex: /investir 500_
+/investir &lt;valor&gt; - Receba uma recomendação completa de investimento
+<i>Ex: /investir 500</i>
 
-/carteira \\- Veja sua carteira salva
-/carteira MXRF11 11, PETR3 2 \\- Salve ou atualize sua carteira
-_Formato: CÓDIGO QUANTIDADE, separados por vírgula_
+/carteira - Veja sua carteira salva
+/carteira MXRF11 11, PETR3 2 - Salve ou atualize sua carteira
+<i>Formato: CÓDIGO QUANTIDADE, separados por vírgula</i>
 
-/help \\- Esta mensagem de ajuda
+/help - Esta mensagem de ajuda
 
-💬 *Conversa livre:* Envie qualquer mensagem sobre investimentos e eu respondo\\!`;
+💬 <b>Conversa livre:</b> Envie qualquer mensagem sobre investimentos e eu respondo!`;
 
 module.exports = {
   SYSTEM_PROMPT,
