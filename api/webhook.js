@@ -1,4 +1,8 @@
+const { inicializar: inicializarGemini } = require('../src/gemini');
 const { criarBot } = require('../src/bot');
+
+// Inicializar Gemini AI (necessário na Vercel, pois index.js não roda)
+inicializarGemini();
 
 // Criar bot em modo webhook (sem polling)
 const bot = criarBot(false);

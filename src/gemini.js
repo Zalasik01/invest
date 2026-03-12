@@ -9,8 +9,7 @@ function inicializar() {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === 'sua_api_key_aqui') {
-    console.error('❌ GEMINI_API_KEY não definida ou inválida no .env');
-    process.exit(1);
+    throw new Error('❌ GEMINI_API_KEY não definida ou inválida no .env');
   }
 
   genAI = new GoogleGenerativeAI(apiKey);

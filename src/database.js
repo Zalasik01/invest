@@ -8,8 +8,7 @@ function getDb() {
     const key = process.env.SUPABASE_KEY;
 
     if (!url || !key) {
-      console.error('❌ SUPABASE_URL ou SUPABASE_KEY não definidos no .env');
-      process.exit(1);
+      throw new Error('❌ SUPABASE_URL ou SUPABASE_KEY não definidos no .env');
     }
 
     supabase = createClient(url, key);

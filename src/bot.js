@@ -78,8 +78,7 @@ function criarBot(polling = true) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
 
   if (!token || token === 'seu_token_aqui') {
-    console.error('❌ TELEGRAM_BOT_TOKEN não definido no .env');
-    process.exit(1);
+    throw new Error('❌ TELEGRAM_BOT_TOKEN não definido no .env');
   }
 
   const bot = new TelegramBot(token, { polling });
