@@ -1,85 +1,85 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
-const DB_PATH = path.join(__dirname, '..', 'investbot.db');
-
-let db;
+let supabase;
 
 function getDb() {
-  if (!db) {
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    criarTabelas();
+  if (!supabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_KEY;
+
+    if (!url || !key) {
+      console.error('❌ SUPABASE_URL ou SUPABASE_KEY não definidos no .env');
+      process.exit(1);
+    }
+
+    supabase = createClient(url, key);
+    console.log('✅ Supabase conectado');
   }
-  return db;
+  return supabase;
 }
 
-function criarTabelas() {
-  // Chamado de dentro de getDb(), então usa db diretamente
-  const database = db;
+async function salvarMensagem(idUsuario, papel, conteudo) {
+  const db = getDb();
+  const { error } = await db
+    .from('mensagens')
+    .insert({ id_usuario: String(idUsuario), papel, conteudo });
 
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS mensagens (
-      id_mensagem INTEGER PRIMARY KEY AUTOINCREMENT,
-      idUsuario TEXT NOT NULL,
-      papel TEXT NOT NULL CHECK(papel IN ('user', 'model')),
-      conteudo TEXT NOT NULL,
-      criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+  if (error) console.error('Erro ao salvar mensagem:', error.message);
+}
+
+async function buscarHistorico(idUsuario, limite = 20) {
+  const db = getDb();
+  const { data, error } = await db
+    .from('mensagens')
+    .select('papel, conteudo')
+    .eq('id_usuario', String(idUsuario))
+    .order('id_mensagem', { ascending: false })
+    .limit(limite);
+
+  if (error) {
+    console.error('Erro ao buscar histórico:', error.message);
+    return [];
+  }
+
+  return (data || []).reverse();
+}
+
+async function salvarCarteira(idUsuario, ativos) {
+  const db = getDb();
+  const { error } = await db
+    .from('carteiras')
+    .upsert(
+      { id_usuario: String(idUsuario), ativos: JSON.stringify(ativos) },
+      { onConflict: 'id_usuario' }
     );
 
-    CREATE TABLE IF NOT EXISTS carteiras (
-      id_carteira INTEGER PRIMARY KEY AUTOINCREMENT,
-      idUsuario TEXT NOT NULL UNIQUE,
-      ativos TEXT NOT NULL,
-      atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_mensagens_usuario ON mensagens(idUsuario);
-    CREATE INDEX IF NOT EXISTS idx_carteiras_usuario ON carteiras(idUsuario);
-  `);
+  if (error) console.error('Erro ao salvar carteira:', error.message);
 }
 
-function salvarMensagem(idUsuario, papel, conteudo) {
-  const database = getDb();
-  const stmt = database.prepare(
-    'INSERT INTO mensagens (idUsuario, papel, conteudo) VALUES (?, ?, ?)'
-  );
-  stmt.run(String(idUsuario), papel, conteudo);
+async function buscarCarteira(idUsuario) {
+  const db = getDb();
+  const { data, error } = await db
+    .from('carteiras')
+    .select('ativos')
+    .eq('id_usuario', String(idUsuario))
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Erro ao buscar carteira:', error.message);
+    return null;
+  }
+
+  return data ? JSON.parse(data.ativos) : null;
 }
 
-function buscarHistorico(idUsuario, limite = 20) {
-  const database = getDb();
-  const stmt = database.prepare(
-    'SELECT papel, conteudo FROM mensagens WHERE idUsuario = ? ORDER BY id_mensagem DESC LIMIT ?'
-  );
-  const rows = stmt.all(String(idUsuario), limite);
-  return rows.reverse();
-}
+async function limparHistorico(idUsuario) {
+  const db = getDb();
+  const { error } = await db
+    .from('mensagens')
+    .delete()
+    .eq('id_usuario', String(idUsuario));
 
-function salvarCarteira(idUsuario, ativos) {
-  const database = getDb();
-  const stmt = database.prepare(`
-    INSERT INTO carteiras (idUsuario, ativos, atualizadoEm) 
-    VALUES (?, ?, CURRENT_TIMESTAMP)
-    ON CONFLICT(idUsuario) 
-    DO UPDATE SET ativos = excluded.ativos, atualizadoEm = CURRENT_TIMESTAMP
-  `);
-  stmt.run(String(idUsuario), JSON.stringify(ativos));
-}
-
-function buscarCarteira(idUsuario) {
-  const database = getDb();
-  const stmt = database.prepare(
-    'SELECT ativos FROM carteiras WHERE idUsuario = ?'
-  );
-  const row = stmt.get(String(idUsuario));
-  return row ? JSON.parse(row.ativos) : null;
-}
-
-function limparHistorico(idUsuario) {
-  const database = getDb();
-  const stmt = database.prepare('DELETE FROM mensagens WHERE idUsuario = ?');
-  stmt.run(String(idUsuario));
+  if (error) console.error('Erro ao limpar histórico:', error.message);
 }
 
 module.exports = {

@@ -1,14 +1,14 @@
 const { salvarCarteira, buscarCarteira } = require('../database');
 
 function registrar(bot) {
-  bot.onText(/\/carteira(?:\s+(.+))?/, (msg, match) => {
+  bot.onText(/\/carteira(?:\s+(.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
     const argumentos = match[1];
 
     if (!argumentos) {
       // Mostrar carteira atual
-      const carteira = buscarCarteira(userId);
+      const carteira = await buscarCarteira(userId);
 
       if (!carteira || carteira.length === 0) {
         bot.sendMessage(
@@ -44,7 +44,7 @@ function registrar(bot) {
         return { codigo, quantidade };
       });
 
-      salvarCarteira(userId, ativos);
+      await salvarCarteira(userId, ativos);
 
       let mensagem = '✅ <b>Carteira salva com sucesso!</b>\n\n';
       ativos.forEach((ativo, i) => {

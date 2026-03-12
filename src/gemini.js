@@ -34,9 +34,8 @@ async function enviarComRetry(chatSession, mensagem, tentativas = 3) {
       const isRateLimit = error.message && error.message.includes('quota');
 
       if ((is429 || isRateLimit) && i < tentativas - 1) {
-        // Esperar antes de tentar novamente (backoff exponencial)
-        const espera = Math.pow(2, i + 1) * 5000; // 10s, 20s, 40s
-        console.log(`⏳ Rate limit atingido. Tentando novamente em ${espera / 1000}s... (tentativa ${i + 2}/${tentativas})`);
+        const espera = Math.pow(2, i + 1) * 5000;
+        console.log(`⏳ Rate limit atingido. Tentando em ${espera / 1000}s... (${i + 2}/${tentativas})`);
         await new Promise((resolve) => setTimeout(resolve, espera));
       } else {
         throw error;
@@ -49,7 +48,7 @@ async function chat(idUsuario, mensagem) {
   if (!model) inicializar();
 
   // Buscar carteira do usuário para contexto
-  const carteira = buscarCarteira(idUsuario);
+  const carteira = await buscarCarteira(idUsuario);
   let contextoCarteira = '';
   if (carteira && carteira.length > 0) {
     const ativos = carteira
@@ -59,7 +58,7 @@ async function chat(idUsuario, mensagem) {
   }
 
   // Buscar histórico de conversas
-  const historico = buscarHistorico(idUsuario);
+  const historico = await buscarHistorico(idUsuario);
 
   // Montar o histórico para o Gemini
   const history = historico.map((msg) => ({
@@ -68,22 +67,18 @@ async function chat(idUsuario, mensagem) {
   }));
 
   // Criar chat com histórico
-  const chatSession = model.startChat({
-    history,
-  });
-
-  // Enviar mensagem com contexto da carteira
+  const chatSession = model.startChat({ history });
   const mensagemCompleta = mensagem + contextoCarteira;
 
   // Salvar mensagem do usuário
-  salvarMensagem(idUsuario, 'user', mensagem);
+  await salvarMensagem(idUsuario, 'user', mensagem);
 
   try {
     const result = await enviarComRetry(chatSession, mensagemCompleta);
     const resposta = result.response.text();
 
     // Salvar resposta do modelo
-    salvarMensagem(idUsuario, 'model', resposta);
+    await salvarMensagem(idUsuario, 'model', resposta);
 
     return resposta;
   } catch (error) {

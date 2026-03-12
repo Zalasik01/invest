@@ -70,7 +70,11 @@ async function enviarRespostaLonga(bot, chatId, texto) {
   }
 }
 
-function criarBot() {
+/**
+ * Cria o bot Telegram.
+ * @param {boolean} polling - true para dev local, false para webhook (Vercel)
+ */
+function criarBot(polling = true) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
 
   if (!token || token === 'seu_token_aqui') {
@@ -78,7 +82,7 @@ function criarBot() {
     process.exit(1);
   }
 
-  const bot = new TelegramBot(token, { polling: true });
+  const bot = new TelegramBot(token, { polling });
 
   console.log('🤖 InvestBot iniciando...');
 
@@ -90,11 +94,11 @@ function criarBot() {
     { command: 'help', description: '❓ Ajuda' },
   ]);
 
-  // Registrar comandos de texto (/start e /carteira com args)
+  // Registrar comandos
   startCmd.registrar(bot);
   carteiraCmd.registrar(bot);
 
-  // Comando /investir por texto — redireciona para botões
+  // Comando /investir — mostra botões de valor
   bot.onText(/\/investir/, (msg) => {
     bot.sendMessage(
       msg.chat.id,
@@ -103,7 +107,7 @@ function criarBot() {
     );
   });
 
-  // Comando /help por texto
+  // Comando /help
   bot.onText(/\/help/, (msg) => {
     bot.sendMessage(msg.chat.id, HELP_MESSAGE, {
       parse_mode: 'HTML',
@@ -158,7 +162,7 @@ function criarBot() {
 
     // --- Carteira ---
     if (data === 'cmd_carteira') {
-      const carteira = buscarCarteira(userId);
+      const carteira = await buscarCarteira(userId);
 
       if (!carteira || carteira.length === 0) {
         bot.editMessageText(
@@ -173,7 +177,7 @@ function criarBot() {
       } else {
         let mensagem = '💼 <b>Sua Carteira Atual:</b>\n\n';
         carteira.forEach((ativo, i) => {
-          mensagem += `${i + 1}. <b>${ativo.codigo}</b> — ${ativo.quantidade} cota${ativo.quantidade > 1 ? 's' : ''}\n`;
+          mensagem += `${i + 1}. <b>${ativo.codigo}</b> - ${ativo.quantidade} cota${ativo.quantidade > 1 ? 's' : ''}\n`;
         });
         mensagem += '\nPara atualizar:\n<code>/carteira MXRF11 11, PETR3 2</code>';
         bot.editMessageText(mensagem, {

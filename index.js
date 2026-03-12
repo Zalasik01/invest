@@ -6,8 +6,8 @@ const { inicializar: inicializarGemini } = require('./src/gemini');
 // Inicializar Gemini AI
 inicializarGemini();
 
-// Inicializar Bot Telegram
-criarBot();
+// Inicializar Bot Telegram (modo polling para dev local)
+criarBot(true);
 
 // Graceful shutdown
 process.on('SIGINT', () => {
