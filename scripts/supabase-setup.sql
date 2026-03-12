@@ -37,6 +37,10 @@ CREATE INDEX IF NOT EXISTS idx_mensagens_usuario ON mensagens (id_usuario);
 CREATE INDEX IF NOT EXISTS idx_carteiras_usuario ON carteiras (id_usuario);
 CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios (username);
 
+-- IDs começando do 0
+ALTER SEQUENCE mensagens_id_mensagem_seq RESTART WITH 0 MINVALUE 0;
+ALTER SEQUENCE carteiras_id_carteira_seq RESTART WITH 0 MINVALUE 0;
+
 -- RLS (Row Level Security) - permitir acesso via service role key
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mensagens ENABLE ROW LEVEL SECURITY;
