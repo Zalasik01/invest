@@ -176,6 +176,39 @@ async function atualizarContatoUsuario(idTelegram, { email, telefone }) {
   if (error) console.error('Erro ao atualizar contato:', error.message);
 }
 
+/**
+ * Funções para o Admin Dashboard
+ */
+async function buscarEstatisticasAdmin() {
+  const db = getDb();
+  const [totalUsuarios, totalMensagens, totalCarteiras] = await Promise.all([
+    db.from('usuarios').select('*', { count: 'exact', head: true }),
+    db.from('mensagens').select('*', { count: 'exact', head: true }),
+    db.from('carteiras').select('*', { count: 'exact', head: true }),
+  ]);
+
+  return {
+    usuarios: totalUsuarios.count || 0,
+    mensagens: totalMensagens.count || 0,
+    carteiras: totalCarteiras.count || 0,
+  };
+}
+
+async function buscarUltimosUsuariosAdmin(limite = 10) {
+  const db = getDb();
+  const { data, error } = await db
+    .from('usuarios')
+    .select('nome, username, ultimo_acesso, criado_em')
+    .order('ultimo_acesso', { ascending: false })
+    .limit(limite);
+
+  if (error) {
+    console.error('Erro ao buscar últimos usuários:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
 module.exports = {
   getDb,
   salvarMensagem,
@@ -186,4 +219,6 @@ module.exports = {
   registrarUsuario,
   buscarUsuario,
   atualizarContatoUsuario,
+  buscarEstatisticasAdmin,
+  buscarUltimosUsuariosAdmin,
 };
