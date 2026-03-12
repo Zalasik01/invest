@@ -18,21 +18,38 @@ function getDb() {
   return supabase;
 }
 
-async function salvarMensagem(idUsuario, papel, conteudo) {
+async function getInternalUserId(idTelegram) {
   const db = getDb();
+  const { data } = await db
+    .from('usuarios')
+    .select('id_usuario')
+    .eq('id_telegram', String(idTelegram))
+    .single();
+
+  return data ? data.id_usuario : null;
+}
+
+async function salvarMensagem(idTelegram, papel, conteudo) {
+  const db = getDb();
+  const internalId = await getInternalUserId(idTelegram);
+  if (!internalId) return;
+
   const { error } = await db
     .from('mensagens')
-    .insert({ id_usuario: String(idUsuario), papel, conteudo });
+    .insert({ id_usuario: internalId, papel, conteudo });
 
   if (error) console.error('Erro ao salvar mensagem:', error.message);
 }
 
-async function buscarHistorico(idUsuario, limite = 20) {
+async function buscarHistorico(idTelegram, limite = 20) {
   const db = getDb();
+  const internalId = await getInternalUserId(idTelegram);
+  if (!internalId) return [];
+
   const { data, error } = await db
     .from('mensagens')
     .select('papel, conteudo')
-    .eq('id_usuario', String(idUsuario))
+    .eq('id_usuario', internalId)
     .order('id_mensagem', { ascending: false })
     .limit(limite);
 
@@ -44,24 +61,30 @@ async function buscarHistorico(idUsuario, limite = 20) {
   return (data || []).reverse();
 }
 
-async function salvarCarteira(idUsuario, ativos) {
+async function salvarCarteira(idTelegram, ativos) {
   const db = getDb();
+  const internalId = await getInternalUserId(idTelegram);
+  if (!internalId) return;
+
   const { error } = await db
     .from('carteiras')
     .upsert(
-      { id_usuario: String(idUsuario), ativos: JSON.stringify(ativos) },
+      { id_usuario: internalId, ativos: JSON.stringify(ativos) },
       { onConflict: 'id_usuario' }
     );
 
   if (error) console.error('Erro ao salvar carteira:', error.message);
 }
 
-async function buscarCarteira(idUsuario) {
+async function buscarCarteira(idTelegram) {
   const db = getDb();
+  const internalId = await getInternalUserId(idTelegram);
+  if (!internalId) return null;
+
   const { data, error } = await db
     .from('carteiras')
     .select('ativos')
-    .eq('id_usuario', String(idUsuario))
+    .eq('id_usuario', internalId)
     .single();
 
   if (error && error.code !== 'PGRST116') {
@@ -72,12 +95,15 @@ async function buscarCarteira(idUsuario) {
   return data ? JSON.parse(data.ativos) : null;
 }
 
-async function limparHistorico(idUsuario) {
+async function limparHistorico(idTelegram) {
   const db = getDb();
+  const internalId = await getInternalUserId(idTelegram);
+  if (!internalId) return;
+
   const { error } = await db
     .from('mensagens')
     .delete()
-    .eq('id_usuario', String(idUsuario));
+    .eq('id_usuario', internalId);
 
   if (error) console.error('Erro ao limpar histórico:', error.message);
 }
@@ -96,13 +122,13 @@ async function registrarUsuario(dadosTelegram) {
     .from('usuarios')
     .upsert(
       {
-        id_usuario: String(id),
+        id_telegram: String(id),
         nome: nomeCompleto,
         username: username || null,
         idioma: language_code || null,
         ultimo_acesso: new Date().toISOString(),
       },
-      { onConflict: 'id_usuario' }
+      { onConflict: 'id_telegram' }
     );
 
   if (error) console.error('Erro ao registrar usuário:', error.message);
@@ -111,12 +137,12 @@ async function registrarUsuario(dadosTelegram) {
 /**
  * Busca dados do usuário pelo ID do Telegram.
  */
-async function buscarUsuario(idUsuario) {
+async function buscarUsuario(idTelegram) {
   const db = getDb();
   const { data, error } = await db
     .from('usuarios')
     .select('*')
-    .eq('id_usuario', String(idUsuario))
+    .eq('id_telegram', String(idTelegram))
     .single();
 
   if (error && error.code !== 'PGRST116') {
@@ -130,8 +156,11 @@ async function buscarUsuario(idUsuario) {
 /**
  * Atualiza email e/ou telefone do usuário.
  */
-async function atualizarContatoUsuario(idUsuario, { email, telefone }) {
+async function atualizarContatoUsuario(idTelegram, { email, telefone }) {
   const db = getDb();
+  const internalId = await getInternalUserId(idTelegram);
+  if (!internalId) return;
+
   const atualizacao = {};
   if (email !== undefined) atualizacao.email = email;
   if (telefone !== undefined) atualizacao.telefone = telefone;
@@ -139,7 +168,7 @@ async function atualizarContatoUsuario(idUsuario, { email, telefone }) {
   const { error } = await db
     .from('usuarios')
     .update(atualizacao)
-    .eq('id_usuario', String(idUsuario));
+    .eq('id_usuario', internalId);
 
   if (error) console.error('Erro ao atualizar contato:', error.message);
 }

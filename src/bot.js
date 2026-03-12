@@ -84,6 +84,40 @@ function criarBot(polling = true) {
 
   const bot = new TelegramBot(token, { polling });
 
+  // -------------------------------------------------------------
+  // TRUQUE PARA VERCEL SERVERLESS: Rastrear Promises ativas
+  // Como Vercel congela o processo quando a requisição HTTP termina,
+  // precisamos aguardar que todos os handlers terminem (ex: Gemini)
+  // -------------------------------------------------------------
+  bot.pendingPromises = [];
+  const originalOn = bot.on.bind(bot);
+  bot.on = (event, listener) => {
+    return originalOn(event, (...args) => {
+      try {
+        const p = listener(...args);
+        if (p && typeof p.then === 'function') {
+          bot.pendingPromises.push(p);
+          p.catch((e) => console.error('Erro no listener:', e.message))
+           .finally(() => {
+             bot.pendingPromises = bot.pendingPromises.filter(prom => prom !== p);
+           });
+        }
+      } catch (err) {
+        console.error('Erro síncrono no listener:', err.message);
+      }
+    });
+  };
+
+  bot.waitForPromises = async () => {
+    while (bot.pendingPromises.length > 0) {
+      // Cria uma cópia para evitar loop infinito caso novas promises sejam adicionadas
+      const promisesAtuais = [...bot.pendingPromises];
+      await Promise.allSettled(promisesAtuais);
+      // O loop continua se novas promises foram parar no array original
+    }
+  };
+  // -------------------------------------------------------------
+
   console.log('🤖 InvestBot iniciando...');
 
   // Configurar menu de comandos do Telegram (botão azul no canto inferior)
