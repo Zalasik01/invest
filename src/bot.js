@@ -125,7 +125,7 @@ function criarBot(polling = true) {
     { command: 'investir', description: '💰 Receber recomendação de investimento' },
     { command: 'carteira', description: '💼 Ver ou salvar carteira' },
     { command: 'help', description: '❓ Ajuda' },
-  ]);
+  ]).catch((err) => console.error('Erro ao definir comandos:', err.message));
 
   // Registrar comandos
   startCmd.registrar(bot);
@@ -165,11 +165,11 @@ function criarBot(polling = true) {
       bot.answerCallbackQuery(query.id, {
         text: '⏳ Aguarde, ainda estou processando...',
         show_alert: false,
-      });
+      }).catch(() => {});
       return;
     }
 
-    bot.answerCallbackQuery(query.id);
+    bot.answerCallbackQuery(query.id).catch(() => {});
 
     // --- Menu principal ---
     if (data === 'cmd_menu') {

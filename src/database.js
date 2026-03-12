@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const fetch = require('cross-fetch');
 
 let supabase;
 
@@ -11,7 +12,10 @@ function getDb() {
       throw new Error('❌ SUPABASE_URL ou SUPABASE_KEY não definidos no .env');
     }
 
-    supabase = createClient(url, key);
+    // Polyfill de fetch para funcionar na Vercel serverless
+    supabase = createClient(url, key, {
+      global: { fetch },
+    });
     console.log('✅ Supabase conectado');
   }
   return supabase;
