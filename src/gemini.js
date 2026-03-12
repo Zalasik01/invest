@@ -6,12 +6,43 @@ let genAI;
 let model;
 
 function inicializar() {
-  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  model = genAI.getGenerativeModel({ 
-    model: 'gemini-2.0-flash',
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey || apiKey === 'sua_api_key_aqui') {
+    console.error('❌ GEMINI_API_KEY não definida ou inválida no .env');
+    process.exit(1);
+  }
+
+  genAI = new GoogleGenerativeAI(apiKey);
+  model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
     systemInstruction: SYSTEM_PROMPT,
   });
-  console.log('✅ Gemini AI inicializado (gemini-2.0-flash)');
+  console.log('✅ Gemini AI inicializado (gemini-2.5-flash)');
+}
+
+/**
+ * Envia mensagem ao Gemini com retry automático para erro 429
+ */
+async function enviarComRetry(chatSession, mensagem, tentativas = 3) {
+  for (let i = 0; i < tentativas; i++) {
+    try {
+      const result = await chatSession.sendMessage(mensagem);
+      return result;
+    } catch (error) {
+      const is429 = error.message && error.message.includes('429');
+      const isRateLimit = error.message && error.message.includes('quota');
+
+      if ((is429 || isRateLimit) && i < tentativas - 1) {
+        // Esperar antes de tentar novamente (backoff exponencial)
+        const espera = Math.pow(2, i + 1) * 5000; // 10s, 20s, 40s
+        console.log(`⏳ Rate limit atingido. Tentando novamente em ${espera / 1000}s... (tentativa ${i + 2}/${tentativas})`);
+        await new Promise((resolve) => setTimeout(resolve, espera));
+      } else {
+        throw error;
+      }
+    }
+  }
 }
 
 async function chat(idUsuario, mensagem) {
@@ -29,7 +60,7 @@ async function chat(idUsuario, mensagem) {
 
   // Buscar histórico de conversas
   const historico = buscarHistorico(idUsuario);
-  
+
   // Montar o histórico para o Gemini
   const history = historico.map((msg) => ({
     role: msg.papel,
@@ -43,12 +74,12 @@ async function chat(idUsuario, mensagem) {
 
   // Enviar mensagem com contexto da carteira
   const mensagemCompleta = mensagem + contextoCarteira;
-  
+
   // Salvar mensagem do usuário
   salvarMensagem(idUsuario, 'user', mensagem);
 
   try {
-    const result = await chatSession.sendMessage(mensagemCompleta);
+    const result = await enviarComRetry(chatSession, mensagemCompleta);
     const resposta = result.response.text();
 
     // Salvar resposta do modelo
@@ -56,7 +87,6 @@ async function chat(idUsuario, mensagem) {
 
     return resposta;
   } catch (error) {
-    // Remover mensagem do user se deu erro para não ficar inconsistente
     console.error('Erro ao chamar Gemini:', error.message);
     throw error;
   }

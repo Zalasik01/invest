@@ -1,0 +1,13 @@
+# Tipo: feat, fix, docs, style, refactor, test, chore
+# Exemplo: feat: adicionar comando /investir
+#
+# Tipos disponíveis:
+#   feat:     Nova funcionalidade
+#   fix:      Correção de bug
+#   docs:     Documentação
+#   style:    Formatação (sem mudança de lógica)
+#   refactor: Refatoração de código
+#   test:     Testes
+#   chore:    Tarefas gerais (build, config, etc.)
+#
+# Escreva a mensagem em português brasileiro!
