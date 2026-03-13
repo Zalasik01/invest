@@ -5,7 +5,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js",
+    "dev": "concurrently \"npm run d:server\" \"npm run d:client\"",
+    "d:server": "node index.js",
+    "d:client": "vite",
+    "build": "vite build",
     "webhook:setup": "node scripts/configurarWebhook.js"
   },
   "keywords": [
@@ -22,9 +25,28 @@
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@reduxjs/toolkit": "^2.11.2",
     "@supabase/supabase-js": "^2.99.1",
+    "autoprefixer": "^10.4.27",
     "cross-fetch": "^4.1.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^17.3.1",
-    "node-telegram-bot-api": "^0.67.0"
+    "express": "^5.2.1",
+    "node-telegram-bot-api": "^0.67.0",
+    "postcss": "^8.5.8",
+    "primeflex": "^4.0.0",
+    "primeicons": "^7.0.0",
+    "primereact": "^10.9.7",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.13.1",
+    "tailwindcss": "^4.2.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.0",
+    "concurrently": "^9.2.1",
+    "vite": "^8.0.0"
   }
 }

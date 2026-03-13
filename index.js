@@ -6,32 +6,35 @@ const { inicializar: inicializarGemini } = require('./src/gemini');
 
 // Importar os handlers da Vercel
 const webhookHandler = require('./api/webhook');
-const indexHandler = require('./api/index');
+const statsHandler = require('./api/stats');
+const authHandler = require('./api/auth');
 
 // Inicializar Gemini AI
 inicializarGemini();
 
-// Inicializar Bot Telegram (em modo polling para o dev local receber mensagens ativamente)
-// O webhook não será chamado localmente pelo Telegram, então o polling resolve.
 criarBot(true);
 
 const app = express();
-app.use(express.json()); // para parsear body no webhook
+app.use(express.json()); // para parsear body
 
-// Rota raiz -> Admin Dashboard / Status
-app.get('/', async (req, res) => {
-  await indexHandler(req, res);
-});
+// APIs Back-End Locais (Espelhos da Vercel)
+app.get('/api/stats', async (req, res) => await statsHandler(req, res));
+app.post('/api/auth', async (req, res) => await authHandler(req, res));
+app.post('/api/webhook', async (req, res) => await webhookHandler(req, res));
 
-// Opcional: Rota de webhook apontando pro handler (pode ser testada via cURL localmente)
-app.post('/api/webhook', async (req, res) => {
-  await webhookHandler(req, res);
+// Servir os arquivos estáticos compilados pelo Vite no Front-End
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Qualquer outra requisição envia o React App (Client-side routing fallback)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
-  console.log(`\n🌐 Servidor web rodando em http://localhost:${PORT}`);
-  console.log(`✨ Rota de admin acessível em http://localhost:${PORT}/?admin=invest2026\n`);
+  console.log(`\n🌐 Backend Local rodando em http://localhost:${PORT}`);
+  console.log(`✨ Vite Dev Server ou App React está pronto! Mande \`npm run dev\` se estiver desenvolvendo.`);
 });
 
 // Graceful shutdown
