@@ -41,13 +41,13 @@ module.exports = async function handler(req, res) {
       });
     };
 
-    const userRows = ultimos.map(u => \`
+    const userRows = ultimos.map(u => `
       <tr class="border-b border-gray-700 hover:bg-gray-750 transition-colors">
-        <td class="px-4 py-3 font-medium text-white">\${u.nome || 'Anônimo'}</td>
-        <td class="px-4 py-3 text-gray-400">\${u.username ? '@' + u.username : '-'}</td>
-        <td class="px-4 py-3 text-gray-400">\${formatarData(u.ultimo_acesso)}</td>
+        <td class="px-4 py-3 font-medium text-white">${u.nome || 'Anônimo'}</td>
+        <td class="px-4 py-3 text-gray-400">${u.username ? '@' + u.username : '-'}</td>
+        <td class="px-4 py-3 text-gray-400">${formatarData(u.ultimo_acesso)}</td>
       </tr>
-    \`).join('');
+    `).join('');
 
     res.status(200).send(`
       <!DOCTYPE html>
@@ -147,8 +147,8 @@ module.exports = async function handler(req, res) {
                     </tr>
                   </thead>
                   <tbody class="text-sm divide-y divide-gray-800">
-                    \${userRows}
-                    \${ultimos.length === 0 ? '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-500">Nenhum usuário encontrado.</td></tr>' : ''}
+                    ${userRows}
+                    ${ultimos.length === 0 ? '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-500">Nenhum usuário encontrado.</td></tr>' : ''}
                   </tbody>
                 </table>
               </div>
