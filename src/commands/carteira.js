@@ -11,12 +11,11 @@ function registrar(bot) {
       const carteira = await buscarCarteira(userId);
 
       if (!carteira || carteira.length === 0) {
-        bot.sendMessage(
+        return bot.sendMessage(
           chatId,
           '📂 Você ainda não salvou sua carteira.\n\n<i>Use: /carteira MXRF11 11, PETR3 2, ITUB4 1</i>',
           { parse_mode: 'HTML' }
         );
-        return;
       }
 
       let mensagem = '💼 <b>Sua Carteira Atual:</b>\n\n';
@@ -25,8 +24,7 @@ function registrar(bot) {
       });
       mensagem += '\n<i>Para atualizar, use: /carteira MXRF11 11, PETR3 2</i>';
 
-      bot.sendMessage(chatId, mensagem, { parse_mode: 'HTML' });
-      return;
+      return bot.sendMessage(chatId, mensagem, { parse_mode: 'HTML' });
     }
 
     // Salvar carteira - formato: MXRF11 11, PETR3 2, ITUB4 1
@@ -52,9 +50,9 @@ function registrar(bot) {
       });
       mensagem += '\n<i>Agora suas recomendações levarão sua carteira em conta!</i> 🎯';
 
-      bot.sendMessage(chatId, mensagem, { parse_mode: 'HTML' });
+      return bot.sendMessage(chatId, mensagem, { parse_mode: 'HTML' });
     } catch (error) {
-      bot.sendMessage(
+      return bot.sendMessage(
         chatId,
         '⚠️ Formato inválido. Use assim:\n\n/carteira MXRF11 11, PETR3 2, ITUB4 1\n\n<i>Código e quantidade separados por espaço, ativos separados por vírgula.</i>',
         { parse_mode: 'HTML' }

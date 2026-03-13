@@ -2,7 +2,7 @@ const { WELCOME_MESSAGE } = require('../config');
 
 function registrar(bot) {
   bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, WELCOME_MESSAGE, {
+    return bot.sendMessage(msg.chat.id, WELCOME_MESSAGE, {
       parse_mode: 'HTML',
       reply_markup: {
         inline_keyboard: [

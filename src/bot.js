@@ -107,6 +107,24 @@ function criarBot(polling = true) {
     });
   };
 
+  const originalOnText = bot.onText.bind(bot);
+  bot.onText = (regexp, listener) => {
+    return originalOnText(regexp, (...args) => {
+      try {
+        const p = listener(...args);
+        if (p && typeof p.then === 'function') {
+          bot.pendingPromises.push(p);
+          p.catch((e) => console.error('Erro no onText:', e.message))
+           .finally(() => {
+             bot.pendingPromises = bot.pendingPromises.filter(prom => prom !== p);
+           });
+        }
+      } catch (err) {
+        console.error('Erro síncrono no onText:', err.message);
+      }
+    });
+  };
+
   bot.waitForPromises = async () => {
     while (bot.pendingPromises.length > 0) {
       // Cria uma cópia para evitar loop infinito caso novas promises sejam adicionadas
@@ -161,7 +179,8 @@ function criarBot(polling = true) {
     const data = query.data;
 
     // Registrar usuário automaticamente (em background)
-    registrarUsuario(query.from).catch(() => {});
+    const pRegistrar = registrarUsuario(query.from).catch(() => {});
+    if (bot.pendingPromises) bot.pendingPromises.push(pRegistrar);
 
     // Se já está processando, bloquear cliques
     if (processando.has(userId)) {
@@ -171,7 +190,8 @@ function criarBot(polling = true) {
       }).catch(() => {});
     }
 
-    bot.answerCallbackQuery(query.id).catch(() => {});
+    const pAnswer = bot.answerCallbackQuery(query.id).catch(() => {});
+    if (bot.pendingPromises) bot.pendingPromises.push(pAnswer);
 
     // --- Menu principal ---
     if (data === 'cmd_menu') {
@@ -185,7 +205,7 @@ function criarBot(polling = true) {
 
     // --- Tela de investir ---
     if (data === 'menu_investir') {
-      bot.editMessageText(
+      return bot.editMessageText(
         '💰 <b>Quanto deseja investir?</b>\n\nEscolha um valor abaixo:',
         {
           chat_id: chatId,
@@ -194,7 +214,6 @@ function criarBot(polling = true) {
           reply_markup: BOTOES_VALORES,
         }
       );
-      return;
     }
 
     // --- Carteira ---
@@ -256,7 +275,8 @@ function criarBot(polling = true) {
         { chat_id: chatId, message_id: messageId, parse_mode: 'HTML' }
       );
 
-      bot.sendChatAction(chatId, 'typing');
+      const pAction = bot.sendChatAction(chatId, 'typing').catch(() => {});
+      if (bot.pendingPromises) bot.pendingPromises.push(pAction);
 
       try {
         const prompt = `Tenho R$ ${valor.toFixed(2)} para investir hoje. Me dê uma recomendação completa seguindo a estrutura obrigatória (Análise de Momento, Recomendação de Alocação, Ativos Selecionados, Estimativa de Retorno).`;
@@ -307,7 +327,10 @@ function criarBot(polling = true) {
   bot.on('message', (msg) => {
     console.log('[BOT EVENT] Mensagem Genérica/Menu disparada por:', msg.from.id, 'Texto:', msg.text);
     // Registrar usuário automaticamente (em background)
-    if (msg.from) registrarUsuario(msg.from).catch(() => {});
+    if (msg.from) {
+      const pRegistrar = registrarUsuario(msg.from).catch(() => {});
+      if (bot.pendingPromises) bot.pendingPromises.push(pRegistrar);
+    }
 
     // Permitir /carteira com argumentos
     if (msg.text && msg.text.startsWith('/carteira ')) return;
