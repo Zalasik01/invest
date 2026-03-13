@@ -1,12 +1,14 @@
 {
   "version": 2,
+  "framework": "vite",
   "builds": [
     {
-      "src": "api/webhook.js",
-      "use": "@vercel/node"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
     },
     {
-      "src": "api/index.js",
+      "src": "api/webhook.js",
       "use": "@vercel/node"
     },
     {
