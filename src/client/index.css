@@ -24,10 +24,4 @@ body {
   background: #64748b;
 }
 
-/* Ajustes finos do Prime no Tema Escuro */
-.p-sidebar-header {
-  border-bottom: 1px solid #334155;
-}
-.p-component, .p-inputtext, .p-card {
-  font-family: inherit;
-}
+
