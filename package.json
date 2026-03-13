@@ -27,6 +27,7 @@
     "@google/generative-ai": "^0.24.1",
     "@reduxjs/toolkit": "^2.11.2",
     "@supabase/supabase-js": "^2.99.1",
+    "@tailwindcss/vite": "^4.2.1",
     "autoprefixer": "^10.4.27",
     "cross-fetch": "^4.1.0",
     "date-fns": "^4.1.0",

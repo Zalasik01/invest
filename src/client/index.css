@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Customizações globais adicionais para PrimeReact + Tailwind compatibilidade */
 body {
