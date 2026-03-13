@@ -133,7 +133,8 @@ function criarBot(polling = true) {
 
   // Comando /investir — mostra botões de valor
   bot.onText(/\/investir/, (msg) => {
-    bot.sendMessage(
+    console.log('[BOT EVENT] Comando /investir detectado de:', msg.from.id);
+    return bot.sendMessage(
       msg.chat.id,
       '💰 <b>Quanto deseja investir?</b>\n\nEscolha um valor abaixo:',
       { parse_mode: 'HTML', reply_markup: BOTOES_VALORES }
@@ -142,7 +143,8 @@ function criarBot(polling = true) {
 
   // Comando /help
   bot.onText(/\/help/, (msg) => {
-    bot.sendMessage(msg.chat.id, HELP_MESSAGE, {
+    console.log('[BOT EVENT] Comando /help detectado de:', msg.from.id);
+    return bot.sendMessage(msg.chat.id, HELP_MESSAGE, {
       parse_mode: 'HTML',
       reply_markup: { inline_keyboard: [[{ text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' }]] },
     });
@@ -152,6 +154,7 @@ function criarBot(polling = true) {
   // Handler de botões inline (callback_query)
   // ==========================================
   bot.on('callback_query', async (query) => {
+    console.log('[BOT EVENT] Callback query recebido:', query.data);
     const chatId = query.message.chat.id;
     const userId = query.from.id;
     const messageId = query.message.message_id;
@@ -162,24 +165,22 @@ function criarBot(polling = true) {
 
     // Se já está processando, bloquear cliques
     if (processando.has(userId)) {
-      bot.answerCallbackQuery(query.id, {
+      return bot.answerCallbackQuery(query.id, {
         text: '⏳ Aguarde, ainda estou processando...',
         show_alert: false,
       }).catch(() => {});
-      return;
     }
 
     bot.answerCallbackQuery(query.id).catch(() => {});
 
     // --- Menu principal ---
     if (data === 'cmd_menu') {
-      bot.editMessageText('🤖 <b>InvestBot</b> — O que deseja fazer?', {
+      return bot.editMessageText('🤖 <b>InvestBot</b> — O que deseja fazer?', {
         chat_id: chatId,
         message_id: messageId,
         parse_mode: 'HTML',
         reply_markup: MENU_PRINCIPAL,
       });
-      return;
     }
 
     // --- Tela de investir ---
@@ -201,7 +202,7 @@ function criarBot(polling = true) {
       const carteira = await buscarCarteira(userId);
 
       if (!carteira || carteira.length === 0) {
-        bot.editMessageText(
+        return bot.editMessageText(
           '📂 Você ainda não salvou sua carteira.\n\nEnvie no chat:\n<code>/carteira MXRF11 11, PETR3 2, ITUB4 1</code>',
           {
             chat_id: chatId,
@@ -216,7 +217,7 @@ function criarBot(polling = true) {
           mensagem += `${i + 1}. <b>${ativo.codigo}</b> - ${ativo.quantidade} cota${ativo.quantidade > 1 ? 's' : ''}\n`;
         });
         mensagem += '\nPara atualizar:\n<code>/carteira MXRF11 11, PETR3 2</code>';
-        bot.editMessageText(mensagem, {
+        return bot.editMessageText(mensagem, {
           chat_id: chatId,
           message_id: messageId,
           parse_mode: 'HTML',
@@ -230,18 +231,16 @@ function criarBot(polling = true) {
           },
         });
       }
-      return;
     }
 
     // --- Ajuda ---
     if (data === 'cmd_help') {
-      bot.editMessageText(HELP_MESSAGE, {
+      return bot.editMessageText(HELP_MESSAGE, {
         chat_id: chatId,
         message_id: messageId,
         parse_mode: 'HTML',
         reply_markup: { inline_keyboard: [[{ text: '🔙 Voltar ao menu', callback_data: 'cmd_menu' }]] },
       });
-      return;
     }
 
     // --- Processar investimento ---
@@ -252,7 +251,7 @@ function criarBot(polling = true) {
       processando.add(userId);
 
       // Mostrar loading
-      bot.editMessageText(
+      await bot.editMessageText(
         `⏳ <b>Analisando o mercado para R$ ${valor.toFixed(2)}...</b>\n\n🔄 Isso pode levar alguns segundos.`,
         { chat_id: chatId, message_id: messageId, parse_mode: 'HTML' }
       );
@@ -267,7 +266,7 @@ function criarBot(polling = true) {
         await enviarRespostaLonga(bot, chatId, resposta);
 
         // Menu pós-resposta
-        bot.sendMessage(chatId, '👇 O que deseja fazer agora?', {
+        return bot.sendMessage(chatId, '👇 O que deseja fazer agora?', {
           reply_markup: {
             inline_keyboard: [
               [
@@ -279,10 +278,10 @@ function criarBot(polling = true) {
           },
         });
       } catch (error) {
-        console.error('Erro no investir:', error.message);
+        console.error('[BOT EVENT] Erro no investir:', error.message);
 
         const isQuota = error.message && (error.message.includes('429') || error.message.includes('quota'));
-        bot.sendMessage(
+        return bot.sendMessage(
           chatId,
           isQuota
             ? '⏳ O serviço de IA está sobrecarregado. Tente em alguns segundos.'
@@ -299,7 +298,6 @@ function criarBot(polling = true) {
       } finally {
         processando.delete(userId);
       }
-      return;
     }
   });
 
@@ -307,6 +305,7 @@ function criarBot(polling = true) {
   // Qualquer mensagem de texto → mostrar menu
   // ==========================================
   bot.on('message', (msg) => {
+    console.log('[BOT EVENT] Mensagem Genérica/Menu disparada por:', msg.from.id, 'Texto:', msg.text);
     // Registrar usuário automaticamente (em background)
     if (msg.from) registrarUsuario(msg.from).catch(() => {});
 
@@ -319,11 +318,10 @@ function criarBot(polling = true) {
       const chatId = msg.chat.id;
 
       if (processando.has(msg.from.id)) {
-        bot.sendMessage(chatId, '⏳ Aguarde, ainda estou processando...');
-        return;
+        return bot.sendMessage(chatId, '⏳ Aguarde, ainda estou processando...');
       }
 
-      bot.sendMessage(
+      return bot.sendMessage(
         chatId,
         '👆 Use os botões para navegar! Ou clique abaixo:',
         { reply_markup: MENU_PRINCIPAL }
