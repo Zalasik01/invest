@@ -27,7 +27,8 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Qualquer outra requisição envia o React App (Client-side routing fallback)
-app.get('/(.*)', (req, res) => {
+// Express 5 / Node 24 support: regex route
+app.get(/^.*$/, (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
